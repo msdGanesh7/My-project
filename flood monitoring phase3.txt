@@ -1,0 +1,140 @@
+sketch info:
+#include <ThingSpeak.h>
+#include <WiFi.h>
+#define ledPin 14
+#define CM_TO_INCH 0.393701
+const int trigPin = 23;
+const int echoPin = 22;
+
+
+// defines variables
+long duration;
+float distance;
+float distanceInch;
+
+// wifi 
+const char *ssid =  "Wokwi-GUEST"; //your network SSID (name)
+const char *pass =  ""; //your network password
+WiFiClient client;
+//thingspeak settings
+unsigned long channel = 2308333; //your channel ID number** dari channel thingspeak yg telah kita buat
+const char *apiKey = "FMXC5QW3BFQ8TI6L"; //your channel write API Key
+
+//int lum, i = 0;
+
+void setup() {
+    pinMode(ledPin, OUTPUT);
+    pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
+    pinMode(echoPin, INPUT); // Sets the echoPin as an Input
+    Serial.begin(115200);
+    delay(10);
+    
+    //connect to WiFi
+    Serial.print("Connecting to: "); Serial.println(ssid);
+    WiFi.begin(ssid, pass);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+    }
+    Serial.println("\nWiFi connected\n");
+    
+    ThingSpeak.begin(client); //initialize ThingSpeak
+}
+
+void loop() {
+// Clears the trigPin
+digitalWrite(trigPin, LOW);
+delayMicroseconds(2);
+
+// Sets the trigPin on HIGH state for 10 micro seconds
+digitalWrite(trigPin, HIGH);
+delayMicroseconds(10);
+digitalWrite(trigPin, LOW);
+
+// Reads the echoPin, returns the sound wave travel time in microseconds
+duration = pulseIn(echoPin, HIGH);
+
+// Calculating the distance cm
+distance= duration*0.034/2;
+
+distanceInch = distance * CM_TO_INCH;
+
+ if(distance<20){
+    digitalWrite(ledPin, HIGH);
+    delay(1000);
+
+    digitalWrite(ledPin, LOW);
+    delay(100);
+  }
+  else{
+    digitalWrite(ledPin, LOW);
+  }
+
+// Prints the distance on the Serial Monitor
+Serial.print("Water level (Cm): ");
+Serial.println(distance);  
+// i++;
+ // lum = analogRead(34);
+  
+  int x = ThingSpeak.writeField(channel, 1, distance, apiKey);
+   if(distance<20){
+    Serial.println("WARNING!");
+    Serial.println("waterlevel(cm): " + String(distance));    
+  }
+  else{
+    Serial.println("SAFE");
+  }
+  //tahan selama 1 detik, program tidak menjalankan yang lain
+  delay(2000);
+}
+DIAGRAM.json
+{
+  "version": 1,
+  "author": "Karthikeyan",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-esp32-devkit-v1", "id": "esp", "top": 47.14, "left": -25.64, "attrs": {} },
+    {
+      "type": "wokwi-led",
+      "id": "led1",
+      "top": 38.35,
+      "left": -179.34,
+      "attrs": { "color": "red" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "ultrasonic1",
+      "top": -46.5,
+      "left": 130.3,
+      "attrs": { "distance": "2" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 161.46,
+      "left": -131.95,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "bz1",
+      "top": -74.4,
+      "left": -257.4,
+      "attrs": { "volume": "0.1" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX0", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX0", "$serialMonitor:TX", "", [] ],
+    [ "ultrasonic1:GND", "esp:GND.1", "black", [ "v0" ] ],
+    [ "ultrasonic1:ECHO", "esp:D22", "gray", [ "v0" ] ],
+    [ "ultrasonic1:TRIG", "esp:D23", "blue", [ "v0" ] ],
+    [ "ultrasonic1:VCC", "esp:3V3", "red", [ "v0" ] ],
+    [ "led1:C", "esp:GND.2", "black", [ "v0" ] ],
+    [ "r1:1", "led1:A", "green", [ "h-22.45", "v-86.76" ] ],
+    [ "r1:2", "esp:D14", "green", [ "v0" ] ],
+    [ "bz1:2", "r1:1", "green", [ "v0" ] ],
+    [ "bz1:1", "esp:GND.2", "green", [ "v0" ] ]
+  ],
+  "dependencies": {}
+}
